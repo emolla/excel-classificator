@@ -1,0 +1,4 @@
+{
+  "billing": ["invoice", "customer"],
+  "accounting": ["asien", "debe", "haber"]
+}
