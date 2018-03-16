@@ -11,7 +11,7 @@ package-lock.json
 config.gypi
 CVS
 npm-debug.log
-.idea
+.idea/
 .idea/encodings.xml
 .idea/excel-classificator.iml
 .idea/modules.xml
