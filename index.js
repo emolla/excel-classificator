@@ -58,7 +58,7 @@ function to_csv(options) {
     }
 
     try{
-        outputFile = path.relative(__dirname, options.outputFile)
+        outputFile = path.resolve(options.outputFile)
     } catch (error){
         console.error('No se ha especificado el fichero de salida.')
     }
@@ -83,8 +83,6 @@ function to_csv(options) {
     ];
 
     var command = 'python ' + __dirname + '/convert.py ' + args.join(' ')
-
-    console.log(command)
 
     return getAsyncCommand(command)
 };
