@@ -18,7 +18,7 @@
     "#USER",
     "/"
   ],
-  "_resolved": "https://registry.npmjs.org/excel-classificator/-/excel-classificator-0.0.1.tgz",
+  "_resolved": "https://registry.npmjs.org/excel-classificator/-/excel-classificator-0.0.7.tgz",
   "_shasum": "",
   "_spec": "excel-classificator",
   "_where": "",
@@ -69,21 +69,21 @@
   "scripts": {
     "test": "mocha test/**.spec.js"
   },
-  "version": "0.0.6",
+  "version": "0.0.7",
   "warnings": [
     {
       "code": "ENOTSUP",
       "required": {
         "node": "~0.8.2"
       },
-      "pkgid": "excel-classificator@0.0.1"
+      "pkgid": "excel-classificator@0.0.7"
     },
     {
       "code": "ENOTSUP",
       "required": {
         "node": "~0.8.2"
       },
-      "pkgid": "excel-classificator@0.0.1"
+      "pkgid": "excel-classificator@0.0.7"
     }
   ],
   "directories": {
