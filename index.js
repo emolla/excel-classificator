@@ -20,7 +20,7 @@ function detect(options) {
     }
 
     try{
-        headerFile = path.relative(__dirname, options.headersFile)
+        headerFile = path.resolve(options.headersFile)
     } catch (error){
         console.error(error)
     }
