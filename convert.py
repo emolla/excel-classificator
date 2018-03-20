@@ -5,6 +5,7 @@ __version__ = "0.0.1"
 __license__ = "GPL-2+"
 
 import os
+import io
 import json
 import sys
 import ast
@@ -26,7 +27,8 @@ except ImportError:
   print("****************************************************************\n")
   sys.exit(1)
 try:
-  import csv
+  # import csv
+  from backports import csv
 except ImportError:
   print("\n******************************************************************")
   print("    csv is required to run this script.")
@@ -47,13 +49,13 @@ def getFileType(l, headersFile, encoding="utf8"):
     row = l.lower().replace(' ', '')
     filetype = ""
 
-    with open(headersFile) as json_data:
+    with io.open(headersFile, "r", encoding=encoding) as json_data:
         headerArray = json.load(json_data)
         for value in headerArray:
             allin = True
             for field in headerArray[value]:
                 fd = field.lower().replace(' ', '')
-                if fd not in row.decode(encoding):
+                if fd not in row:
                     allin = False
             if allin:
                 filetype = value
@@ -61,7 +63,7 @@ def getFileType(l, headersFile, encoding="utf8"):
     return filetype, row
 
 
-def read_excel_xlrd(inputFilePath, outFilePath, headerFields):
+def read_excel_xlrd(inputFilePath, outFilePath, headerFields, detect):
     wb = xlrd.open_workbook(inputFilePath) #on_demand = True, encoding='cp1252'
     outfile = open(outFilePath, "w")
     filetype = ""
@@ -78,6 +80,8 @@ def read_excel_xlrd(inputFilePath, outFilePath, headerFields):
                     if header:
                         outfile.write(header)
                 else:
+                    if detect == "true":
+                        break
                     outfile.write(row.encode("utf8"))
                     numlines = numlines + 1
         else:
@@ -89,59 +93,64 @@ def read_excel_xlrd(inputFilePath, outFilePath, headerFields):
                     if header:
                         outfile.write(header)
                 else:
+                    if detect == "true":
+                        break
                     outfile.write(row.encode("utf8"))
                     numlines = numlines + 1
     outfile.close()
     return filetype, numlines
 
 
-def read_csv(inputFilePath, outFilePath, headerFields):
-    outfile = open(outFilePath, 'w')
+def read_csv(inputFilePath, outFilePath, headerFields, fileEncoding, detect):
+    encoding = "utf-8"
+    outfile = io.open(outFilePath, 'w', encoding=encoding)
+
+    if fileEncoding is not None:
+        encoding = fileEncoding
     filetype = ""
     numlines = 0
-    with open(inputFilePath, 'rU') as file:
+    with io.open(inputFilePath, "rU", encoding=encoding) as file:
         sniffed = csv.Sniffer().sniff(file.readline())
-        detectedEncoding = chardet.detect(file.readline())
-        encoding = "utf-8"
-        if detectedEncoding is not None:
-            encoding = detectedEncoding['encoding']
         while sniffed.delimiter not in ";,\t":
             sniffed = csv.Sniffer().sniff(file.readline())
         file.seek(0)
         reader = csv.reader(file, delimiter=sniffed.delimiter)
         for i in reader:
-            row = ';'.join(map(lambda e: str(e).strip(), i)) + '\n'
+            row = ';'.join(i) + '\n'
             if filetype == "":
-                row = ';'.join(map(lambda e: str(e).strip(), i)) + '\n'
+                row = ';'.join(i) + '\n'
                 filetype, header = getFileType(row, headerFields, encoding)
                 if header:
                     outfile.write(header)
             else:
+                if detect == "true":
+                    break
                 outfile.write(row)
                 numlines = numlines + 1
     outfile.close()
     return filetype, numlines
 
 
-def filter_to_csv(inputFilePath, extension, outputFilePath, headerFields):
+def filter_to_csv(inputFilePath, extension, outputFilePath, headerFields, fileEncoding, detect):
     filetype = ""
     numlines = 0
 
     try:
         if inputFilePath.lower().endswith(".csv") or extension == "csv":
-            filetype, numlines = read_csv(inputFilePath, outputFilePath, headerFields)
+            filetype, numlines = read_csv(inputFilePath, outputFilePath, headerFields, fileEncoding, detect)
         else:
-            filetype, numlines = read_excel_xlrd(inputFilePath, outputFilePath, headerFields)
+            filetype, numlines = read_excel_xlrd(inputFilePath, outputFilePath, headerFields, detect)
     except Exception:
-        filetype, numlines = read_csv(inputFilePath, outputFilePath, headerFields)
+        filetype, numlines = read_csv(inputFilePath, outputFilePath, headerFields, fileEncoding, detect)
 
     return filetype, numlines
-
 
 if __name__ == "__main__":
   parser = ArgumentParser(usage="%%prog -i infile -o outfile -hf headersFile")
   parser.add_argument('-i', "--infile", dest="inputFile", required=True, help="full path to file of the source spreadsheet")
-  parser.add_argument('-e', "--extension", dest="extension", help="file extension")
+  parser.add_argument('-d', "--detectMode", dest="detect", help="detect mode")
+  parser.add_argument('-ex', "--extension", dest="extension", help="file extension")
+  parser.add_argument('-en', "--fileEncoding", dest="fileEncoding", help="file encoding")
   parser.add_argument('-o', "--outfile", dest="outputFile", help="filename to save the generated csv file")
   parser.add_argument('-hf', "--headersFile", dest="headersFile", help="header fields to detect in input file")
 
@@ -153,16 +162,20 @@ if __name__ == "__main__":
         parser.error("File " + os.path.abspath(args.inputFile) + " not existss")
       if not os.path.exists(args.headersFile):
         parser.error("File " + os.path.abspath(args.headersFile) + " not exists")
-
+      if args.outputFile is None:
+        args.outputFile = None
+      else:
+            if os.path.exists(args.outputFile) and not os.path.isfile(args.outputFile):
+                basename = os.path.basename(args.inputFile)
+                args.outputFile = args.outputFile + os.path.sep + os.path.splitext(basename)[0]
       if not os.path.isfile(args.inputFile):
         parser.error("File " + os.path.abspath(args.inputFile) + " is a folder")
-      if os.path.exists(args.outputFile) and not os.path.isfile(args.outputFile):
-          basename = os.path.basename(args.inputFile)
-          args.outputFile = args.outputFile + os.path.sep + os.path.splitext(basename)[0]
       if not os.path.isfile(args.headersFile):
         parser.error("File " + os.path.abspath(args.headersFile) + " is a folder")
       if not args.outputFile or args.outputFile == "undefined":
         args.outputFile = args.inputFile + ".csv"
 
-      filetype, numLines = filter_to_csv(args.inputFile, args.extension, args.outputFile, args.headersFile)
+      fileEncoding = os.popen("file -b --mime-encoding " + args.inputFile).read()
+      # print fileEncoding
+      filetype, numLines = filter_to_csv(inputFilePath = args.inputFile, extension = args.extension, outputFilePath = args.outputFile, headerFields = args.headersFile, fileEncoding = fileEncoding, detect = args.detect)
       sys.stdout.write(json.JSONEncoder().encode({"fileType":filetype,"numLines":numLines,"outFile":os.path.abspath(args.outputFile)}))

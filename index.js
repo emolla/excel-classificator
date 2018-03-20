@@ -1,23 +1,20 @@
-var path = require('path');
+var path = require('path')
 var Promise = require('bluebird')
 var cmd = require('node-cmd')
+
 var excelNormalizer = {}
 
-const getAsync = Promise.promisify(cmd.get, { multiArgs: true, context: cmd })
+const getAsyncCommand = Promise.promisify(cmd.get, { multiArgs: true, context: cmd })
 
-function to_csv(options) {
+function detect(options) {
     var inputFile = ''
-    var outputFile = ''
     var headerFile = ''
+    var extension = 'csv'
+
+    options.extension = options.extension || extension
 
     try{
         inputFile = path.relative(__dirname, options.inputFile)
-    } catch (error){
-        console.error(error)
-    }
-
-    try{
-        outputFile = path.relative(__dirname, options.outputFile)
     } catch (error){
         console.error(error)
     }
@@ -28,15 +25,70 @@ function to_csv(options) {
         console.error(error)
     }
 
+    if (options.extension.indexOf('openxml') > 0){
+        extension = 'xlsx'
+    } else if (options.extension.indexOf('excel') > 0){
+        extension = 'xls'
+    }
+
     var args = [
         '-i', '"' + inputFile + '"',
-        '-e', '"' + options.extension + '"',
+        '-ex', '"' + extension + '"',
+        '-d', '"true"',
+        '-hf', '"' + headerFile +'"'
+    ];
+
+    var command = 'python ' + __dirname + '/convert.py ' + args.join(' ')
+
+    return getAsyncCommand(command)
+};
+
+function to_csv(options) {
+    var inputFile = ''
+    var outputFile = ''
+    var headerFile = ''
+    var extension = 'csv'
+
+    options.extension = options.extension || extension
+
+    try{
+        inputFile = path.relative(__dirname, options.inputFile)
+    } catch (error){
+        console.error(error)
+    }
+
+    try{
+        outputFile = path.relative(__dirname, options.outputFile)
+    } catch (error){
+        console.error('No se ha especificado el fichero de salida.')
+    }
+
+    try{
+        headerFile = path.relative(__dirname, options.headersFile)
+    } catch (error){
+        console.error(error)
+    }
+
+    if (options.extension.indexOf('openxml') > 0){
+        extension = 'xlsx'
+    } else if (options.extension.indexOf('excel') > 0){
+        extension = 'xls'
+    }
+
+    var args = [
+        '-i', '"' + inputFile + '"',
+        '-ex', '"' + extension + '"',
         '-o', '"' + outputFile +'"',
         '-hf', '"' + headerFile +'"'
     ];
 
-    return getAsync('python ' + __dirname + '/convert.py ' + args.join(' '))
+    var command = 'python ' + __dirname + '/convert.py ' + args.join(' ')
+
+    console.log(command)
+
+    return getAsyncCommand(command)
 };
 
 excelNormalizer.to_csv = to_csv
+excelNormalizer.detect = detect
 module.exports = excelNormalizer;
