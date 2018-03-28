@@ -114,20 +114,29 @@ def read_csv(inputFilePath, outFilePath, headerFields, fileEncoding, detect):
         while sniffed.delimiter not in ";,\t":
             sniffed = csv.Sniffer().sniff(file.readline())
         file.seek(0)
+        outData = ""
         reader = csv.reader(file, delimiter=sniffed.delimiter)
-        for i in reader:
-            row = ';'.join(i) + '\n'
-            if filetype == "":
+        if detect == "true":
+            for i in reader:
                 row = ';'.join(i) + '\n'
-                filetype, header = getFileType(row, headerFields, encoding)
-                if header:
-                    outfile.write(header)
-            else:
-                if detect == "true":
+                if filetype == "":
+                    filetype, header = getFileType(row, headerFields, encoding)
+                    if header:
+                        outData = header
+                else:
                     break
-                outfile.write(row)
-                numlines = numlines + 1
-    outfile.close()
+        else:
+            for i in reader:
+                row = ';'.join(i) + '\n'
+                if filetype == "":
+                    filetype, header = getFileType(row, headerFields, encoding)
+                    if header:
+                        outData = header
+                else:
+                    outData = row
+                    numlines = numlines + 1
+            outfile.write(outData)
+            outfile.close()
     return filetype, numlines
 
 
